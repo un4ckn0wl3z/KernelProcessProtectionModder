@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/KernelProcessProtectionModder">
+        <file>img/spartan-helmet.png</file>
+    </qresource>
+</RCC>
