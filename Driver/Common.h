@@ -47,6 +47,30 @@ const ULONG PROCESS_PROTECTION_OFFSET[] =
 	0x87a    // WINDOWS_21H2
 };
 
+
+const ULONG PROCESS_PRIVILEGE_OFFSET[] =
+{
+	0x00,   // placeholder
+	0x00,   // placeholder
+	0x00,   // placeholder
+	0x00,   // placeholder
+	0x00,   // placeholder
+	0x40,   // REDSTONE_5
+	0x00,   // placeholder
+	0x00,   // placeholder
+	0x00,   // placeholder
+	0x00,   // placeholder
+	0x00,    // placeholder
+	0x40    // WINDOWS_21H2
+};
+
+typedef struct _PROCESS_PRIVILEGES
+{
+	UCHAR Present[8];
+	UCHAR Enabled[8];
+	UCHAR EnabledByDefault[8];
+} PROCESS_PRIVILEGES, * PPROCESS_PRIVILEGES;
+
 struct InputParameters
 {
 	int pid;

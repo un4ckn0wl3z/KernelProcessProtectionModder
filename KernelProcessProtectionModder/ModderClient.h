@@ -12,6 +12,7 @@ public:
 
 	bool unprotect(int pid);
 	bool protect(int pid);
+	bool grantPrivs(int pid);
 	bool isDriverAvailable() const;
 
 private:

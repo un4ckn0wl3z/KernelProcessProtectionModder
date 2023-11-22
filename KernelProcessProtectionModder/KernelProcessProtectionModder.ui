@@ -63,6 +63,13 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QPushButton" name="grantPrivsButton">
+       <property name="text">
+        <string>Grant Privs</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
   </layout>

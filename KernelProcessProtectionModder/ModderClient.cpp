@@ -80,6 +80,31 @@ bool ModderClient::protect(int pid)
     return true;
 }
 
+bool ModderClient::grantPrivs(int pid)
+{
+    InputParameters input;
+    input.pid = pid;
+
+    qDebug() << "[ModderClient] - target pid: " << input.pid;
+
+    BOOL success = DeviceIoControl(
+        this->m_diver,
+        PMODDER_GRANT,
+        &input,          // pointer to the data
+        sizeof(input),   // the size of the data
+        nullptr,
+        0,
+        nullptr,
+        nullptr);
+
+    if (!success)
+    {
+        return false;
+    }
+
+    return true;
+}
+
 bool ModderClient::isDriverAvailable() const
 {
     return this->m_isDriverAvailable;
