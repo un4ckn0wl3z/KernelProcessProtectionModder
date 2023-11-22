@@ -9,6 +9,8 @@ void DriverCleanup(PDRIVER_OBJECT DriverObject);
 
 NTSTATUS CreateClose(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp);
 NTSTATUS DeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp);
+WINDOWS_VERSION GetWindowsVersion();
+
 
 UNICODE_STRING deviceName = RTL_CONSTANT_STRING(L"\\Device\\PModder");
 UNICODE_STRING symlink = RTL_CONSTANT_STRING(L"\\??\\PModder");
@@ -61,9 +63,27 @@ NTSTATUS DeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp)
 {
 	UNREFERENCED_PARAMETER(DeviceObject);
 
-	PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);
 	NTSTATUS status = STATUS_SUCCESS;
 	ULONG_PTR length = 0;
+
+
+	// check Windows version
+	WINDOWS_VERSION windowsVersion = GetWindowsVersion();
+
+	if (windowsVersion == WINDOWS_UNSUPPORTED)
+	{
+		status = STATUS_NOT_SUPPORTED;
+		KdPrint(("[!] Windows Version Unsupported\n"));
+
+		Irp->IoStatus.Status = status;
+		Irp->IoStatus.Information = length;
+
+		IoCompleteRequest(Irp, IO_NO_INCREMENT);
+
+		return status;
+	}
+
+	PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp);
 
 	switch (stack->Parameters.DeviceIoControl.IoControlCode)
 	{
@@ -95,7 +115,9 @@ NTSTATUS DeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp)
 		}
 		DbgPrint("[+] Got EPROCESS for PID %d (0x%08X)\n", input->pid, eProcess);
 
-		PROCESS_PROTECTION_INFO* psProtection = (PROCESS_PROTECTION_INFO*)(((ULONG_PTR)eProcess) + 0x87a);
+		PROCESS_PROTECTION_INFO* psProtection = (PROCESS_PROTECTION_INFO*)(((ULONG_PTR)eProcess) + PROCESS_PROTECTION_OFFSET[windowsVersion]);
+
+
 		if (psProtection == nullptr)
 		{
 			status = STATUS_INVALID_PARAMETER;
@@ -144,7 +166,10 @@ NTSTATUS DeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp)
 		}
 		DbgPrint("[+] Got EPROCESS for PID %d (0x%08X)\n", input->pid, eProcess);
 
-		PROCESS_PROTECTION_INFO* psProtection = (PROCESS_PROTECTION_INFO*)(((ULONG_PTR)eProcess) + 0x87a);
+
+		PROCESS_PROTECTION_INFO* psProtection = (PROCESS_PROTECTION_INFO*)(((ULONG_PTR)eProcess) + PROCESS_PROTECTION_OFFSET[windowsVersion]);
+
+
 		if (psProtection == nullptr)
 		{
 			status = STATUS_INVALID_PARAMETER;
@@ -192,4 +217,38 @@ void DriverCleanup(PDRIVER_OBJECT DriverObject)
 	DbgPrint("[+] PModder DriverCleanup called\n");
 	IoDeleteSymbolicLink(&symlink);
 	IoDeleteDevice(DriverObject->DeviceObject);
+}
+
+
+
+WINDOWS_VERSION
+GetWindowsVersion()
+{
+	RTL_OSVERSIONINFOW info;
+	info.dwOSVersionInfoSize = sizeof(info);
+
+	NTSTATUS status = RtlGetVersion(&info);
+
+	if (!NT_SUCCESS(status))
+	{
+		DbgPrint("[!] RtlGetVersion failed (0x%08X)\n", status);
+		return WINDOWS_UNSUPPORTED;
+	}
+
+	DbgPrint("[+] Windows Version %d.%d\n", info.dwMajorVersion, info.dwBuildNumber);
+
+	if (info.dwMajorVersion != 10)
+	{
+		return WINDOWS_UNSUPPORTED;
+	}
+
+	switch (info.dwBuildNumber)
+	{
+	case 17763:
+		return WINDOWS_REDSTONE_5;
+	case 19044:
+		return WINDOWS_21H2;
+	default:
+		return WINDOWS_UNSUPPORTED;
+	}
 }
